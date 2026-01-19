@@ -1,0 +1,57 @@
+#Esto es roto de momento
+#Esto es roto de momento
+#Esto es roto de momento
+
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Leer CSV
+df = pd.read_csv("t2"
+".csv", encoding="utf-8-sig")
+
+# Limpiar nombres de columnas
+df.columns = df.columns.str.strip()
+
+# Buscar la columna Market Cap (sin depender del nombre exacto)
+market_col = None
+for col in df.columns:
+    if "market" in col.lower():
+        market_col = col
+        break
+
+if market_col is None:
+    raise Exception("No existe columna Market Cap en el CSV")
+
+# Pasar a texto
+df[market_col] = df[market_col].astype(str)
+
+# Limpiar valores (quitar símbolos raros)
+market_caps = []
+
+for valor in df[market_col]:
+    numero = ""
+    for c in valor:
+        if c.isdigit() or c == ".":
+            numero += c
+    if numero != "":
+        market_caps.append(float(numero))
+    else:
+        market_caps.append(None)
+
+df[market_col] = market_caps
+
+# Quitar valores vacíos
+df = df.dropna(subset=[market_col])
+
+# HISTOGRAMA
+plt.figure(figsize=(8, 6))
+plt.hist(df[market_col], bins=10)
+
+plt.xlabel("Market Cap")
+plt.ylabel("Frecuencia")
+plt.title("Histograma de Market Cap")
+plt.grid(True)
+
+plt.show()
+
+
