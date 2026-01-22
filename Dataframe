@@ -1,57 +1,53 @@
-#Esto es roto de momento
-#Esto es roto de momento
-#Esto es roto de momento
-
 import pandas as pd
+import numpy as np
+import re
 import matplotlib.pyplot as plt
 
-# Leer CSV
-df = pd.read_csv("t2"
-".csv", encoding="utf-8-sig")
+# Cargar CSV
+df = pd.read_csv("t2.csv")
 
-# Limpiar nombres de columnas
-df.columns = df.columns.str.strip()
+# Convertir Market Cap
+def parse_market_cap(val):
+    if pd.isna(val):
+        return np.nan
+    
+    s = str(val).strip()
 
-# Buscar la columna Market Cap (sin depender del nombre exacto)
-market_col = None
-for col in df.columns:
-    if "market" in col.lower():
-        market_col = col
-        break
+    if s in ["--", "", "nan"]:
+        return np.nan
 
-if market_col is None:
-    raise Exception("No existe columna Market Cap en el CSV")
+    s = re.sub(r"[^\d.,BMK]", "", s)
 
-# Pasar a texto
-df[market_col] = df[market_col].astype(str)
+    mult = 1
+    if s.endswith("B"):
+        mult = 1e9
+        s = s[:-1]
+    elif s.endswith("M"):
+        mult = 1e6
+        s = s[:-1]
+    elif s.endswith("K"):
+        mult = 1e3
+        s = s[:-1]
 
-# Limpiar valores (quitar símbolos raros)
-market_caps = []
+    s = s.replace(",", "")
 
-for valor in df[market_col]:
-    numero = ""
-    for c in valor:
-        if c.isdigit() or c == ".":
-            numero += c
-    if numero != "":
-        market_caps.append(float(numero))
-    else:
-        market_caps.append(None)
+    try:
+        return float(s) * mult
+    except:
+        return np.nan
 
-df[market_col] = market_caps
+df["MarketCap_num"] = df["Market Cap"].apply(parse_market_cap)
 
-# Quitar valores vacíos
-df = df.dropna(subset=[market_col])
+print(df[["Market Cap", "MarketCap_num"]].head())  # DEBUG para comprobar
 
-# HISTOGRAMA
-plt.figure(figsize=(8, 6))
-plt.hist(df[market_col], bins=10)
-
-plt.xlabel("Market Cap")
-plt.ylabel("Frecuencia")
-plt.title("Histograma de Market Cap")
-plt.grid(True)
+# Gráfico de barras (mejor que histograma para empresas)
+plt.figure(figsize=(12,6))
+plt.bar(range(len(df)), df["MarketCap_num"])
+plt.xticks(range(len(df)), df["EPS (Previsto)"], rotation=90)
+plt.title("Market Cap por empresa")
+plt.tight_layout()
 
 plt.show()
+
 
 
