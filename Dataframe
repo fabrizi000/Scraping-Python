@@ -1,21 +1,25 @@
-import pandas as pd
-import numpy as np
-import re
-import matplotlib.pyplot as plt
+import pandas as pd #Esto es para dataframe
+import numpy as np #Esto es para cuando no tiene dato la empresa es decir cuando pone -- porque se scrapea asi
+import re #Para limipiar texto
+import matplotlib.pyplot as plt #Para hacer graficos
 
-# Cargar CSV
+# Lee el csv
 df = pd.read_csv("t2.csv")
 
-# Convertir Market Cap
+# Esto es para convertir en un "numero" el market cap ya que se bugea pandas y no los coge bien
+
 def parse_market_cap(val):
     if pd.isna(val):
-        return np.nan
-    
+        return np.nan #Si esta vacio devuelve NaN
+
+    #Convertimos el valor a string y .strip() es para quitar espacios.
     s = str(val).strip()
 
+    #Si el valor esta vacio lo ignora
     if s in ["--", "", "nan"]:
         return np.nan
 
+    #Esta parte es solo para quitar caracteres que no hacen falta porque el scrapper coge todo en la pagina y algunos datos salen con letras al lado.
     s = re.sub(r"[^\d.,BMK]", "", s)
 
     mult = 1
