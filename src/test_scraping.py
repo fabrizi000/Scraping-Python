@@ -8,18 +8,15 @@ import time
 import csv
 import os
 
-# --- CONFIGURACIÓN DE RUTA ---
+
 home_dir = os.path.expanduser("~")
 ruta_completa = "/home/alusmr/Documentos/datos_investing.csv"
 
-
-# --- CONFIGURACIÓN DE DRIVER ---
 geckodriver_path = "/usr/local/bin/geckodriver"
 service = Service(executable_path=geckodriver_path)
 
 options = Options()
-# options.add_argument("--headless")  # Descomenta si no quieres abrir ventana
-options.binary_location = "/usr/bin/firefox"  # Ruta de tu Firefox
+options.binary_location = "/usr/bin/firefox"
 
 driver = webdriver.Firefox(service=service, options=options)
 
@@ -45,37 +42,49 @@ try:
     wait = WebDriverWait(driver, 20)
     todos_los_datos = []
 
-    #Este trozo extrae las paginas de HOY
-    print("Obteniendo los datos de HOY...")
+   
+    print("\n¿Que apartado quieres scrapear?")
+    print("1 - Hoy")
+    print("2 - Mañana")
+
+    opcion = input("Elige una opción (1/2): ").strip()
+
     wait.until(EC.presence_of_element_located((By.ID, "earningsCalendarData")))
-    rows_today = driver.find_elements(By.CSS_SELECTOR, "#earningsCalendarData tbody tr")
-    todos_los_datos.extend(extract_table_data(rows_today[:15], "Hoy"))
 
-    #Este trozo son las para cambiar a la tabla  de esta semana
-    print("Obteniendo datos de 'Esta semana'...")
-    this_week_btn = wait.until(EC.element_to_be_clickable((By.ID, "timeFrame_thisWeek")))
-    driver.execute_script("arguments[0].click();", this_week_btn)
+    if opcion == "1":
+        print("Obteniendo datos de HOY...")
+        rows = driver.find_elements(By.CSS_SELECTOR, "#earningsCalendarData tbody tr")
+        todos_los_datos.extend(extract_table_data(rows[:15], "Hoy"))
 
-    time.sleep(3) #Espera  para que la tabla se refresque 
+    elif opcion == "2":
+        print("Cambiando a MAÑANA...")
+        tomorrow_btn = wait.until(EC.element_to_be_clickable((By.ID, "timeFrame_tomorrow")))
+        driver.execute_script("arguments[0].click();", tomorrow_btn)
+
+        time.sleep(3)
+
+        print("Obteniendo los datos de MAÑANA...")
+        rows = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "#earningsCalendarData tbody tr")))
+        todos_los_datos.extend(extract_table_data(rows[:15], "Mañana"))
+
+    else:
+        print("Opción no válida.")
     
-    #Aqui extraemos la tabla de esta semana
-    print("Extrayendo datos de ESTA SEMANA...")
-    rows_week = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "#earningsCalendarData tbody tr")))
-    todos_los_datos.extend(extract_table_data(rows_week[:15], "Esta Semana"))
 
-    #Esto es la parte de codigo que falta para tener el archivo.csv
+
+
     if todos_los_datos:
         keys = todos_los_datos[0].keys()
         with open(ruta_completa, 'w', newline='', encoding='utf-8-sig') as f:
             dict_writer = csv.DictWriter(f, fieldnames=keys)
             dict_writer.writeheader()
             dict_writer.writerows(todos_los_datos)
-        print(f"\n Éxito: Datos guardados en {ruta_completa}")
+        print(f"\nÉxito: Datos guardados en {ruta_completa}")
     else:
-        print("\n No se encontraron datos para guardar.")
+        print("\nNo se encontraron datos para guardar.")
 
 except Exception as e:
-    print(f"Ocurrió un error: {e}")
+    print(f"Ocurrió un error {e}")
 
 finally:
     driver.quit()
