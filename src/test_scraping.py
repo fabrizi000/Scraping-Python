@@ -8,7 +8,6 @@ import time
 import csv
 import os
 
-
 home_dir = os.path.expanduser("~")
 ruta_completa = "/home/alusmr/Documentos/datos_investing.csv"
 
@@ -42,12 +41,14 @@ try:
     wait = WebDriverWait(driver, 20)
     todos_los_datos = []
 
-   
-    print("\n¿Que apartado quieres scrapear?")
+    print("\n¿Qué apartado quieres scrapear?")
     print("1 - Hoy")
     print("2 - Mañana")
+    print("3 - Esta semana")
+    print("4 - Semana que viene")
+    print("5 - Ayer")
 
-    opcion = input("Elige una opción (1/2): ").strip()
+    opcion = input("Elige una opción (1-5): ").strip()
 
     wait.until(EC.presence_of_element_located((By.ID, "earningsCalendarData")))
 
@@ -58,21 +59,48 @@ try:
 
     elif opcion == "2":
         print("Cambiando a MAÑANA...")
-        tomorrow_btn = wait.until(EC.element_to_be_clickable((By.ID, "timeFrame_tomorrow")))
-        driver.execute_script("arguments[0].click();", tomorrow_btn)
-
+        btn = wait.until(EC.element_to_be_clickable((By.ID, "timeFrame_tomorrow")))
+        driver.execute_script("arguments[0].click();", btn)
         time.sleep(3)
 
-        print("Obteniendo los datos de MAÑANA...")
+        print("Obteniendo datos de MAÑANA...")
         rows = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "#earningsCalendarData tbody tr")))
         todos_los_datos.extend(extract_table_data(rows[:15], "Mañana"))
 
+    elif opcion == "3":
+        print("Cambiando a ESTA SEMANA...")
+        btn = wait.until(EC.element_to_be_clickable((By.ID, "timeFrame_thisWeek")))
+        driver.execute_script("arguments[0].click();", btn)
+        time.sleep(3)
+
+        print("Obteniendo datos de ESTA SEMANA...")
+        rows = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "#earningsCalendarData tbody tr")))
+        todos_los_datos.extend(extract_table_data(rows[:15], "Esta semana"))
+
+    elif opcion == "4":
+        print("Cambiando a PRÓXIMA SEMANA...")
+        btn = wait.until(EC.element_to_be_clickable((By.ID, "timeFrame_nextWeek")))
+        driver.execute_script("arguments[0].click();", btn)
+        time.sleep(3)
+
+        print("Obteniendo datos de PRÓXIMA SEMANA...")
+        rows = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "#earningsCalendarData tbody tr")))
+        todos_los_datos.extend(extract_table_data(rows[:15], "Próxima semana"))
+
+    elif opcion == "5":
+        print("Cambiando a AYER...")
+        btn = wait.until(EC.element_to_be_clickable((By.ID, "timeFrame_yesterday")))
+        driver.execute_script("arguments[0].click();", btn)
+        time.sleep(3)
+
+        print("Obteniendo datos de AYER...")
+        rows = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "#earningsCalendarData tbody tr")))
+        todos_los_datos.extend(extract_table_data(rows[:15], "Ayer"))
+
     else:
         print("Opción no válida.")
-    
 
-
-
+    # GUARDAR CSV
     if todos_los_datos:
         keys = todos_los_datos[0].keys()
         with open(ruta_completa, 'w', newline='', encoding='utf-8-sig') as f:
@@ -84,7 +112,7 @@ try:
         print("\nNo se encontraron datos para guardar.")
 
 except Exception as e:
-    print(f"Ocurrió un error {e}")
+    print(f"Ocurrió un error: {e}")
 
 finally:
     driver.quit()
