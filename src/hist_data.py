@@ -1,67 +1,133 @@
-import pandas as pd #Esto es para dataframe
-import numpy as np #Esto es para cuando no tiene dato la empresa es decir cuando pone -- porque se scrapea asi
-import re #Para limipiar texto
-import matplotlib.pyplot as plt #Para hacer graficos
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 
-# Lee el csv
-df = pd.read_csv("t2.csv")
+# Leer el CSV
+df = pd.read_csv("/home/alusmr/Documentos/python2/t2.csv")
 
-# Esto es para convertir en un "numero" el market cap ya que se bugea pandas y no los coge bien
+# Preguntar qué columna usar
+print("¿Qué dato quieres mostrar?")
+print("1 - Actual")
+print("2 - Prevision")
+print("3 - Anterior")
 
-def parse_market_cap(val):
+opcion = input("Selecciona 1, 2 o 3: ").strip()
+
+if opcion == "1":
+    columna = "Actual"
+elif opcion == "2":
+    columna = "Prevision"
+elif opcion == "3":
+    columna = "Anterior"
+else:
+    print("Opción no válida")
+    exit()
+
+# Preguntar qué tipo de valores mostrar
+print("\n¿Qué tipo de valores quieres representar?")
+print("1 - Porcentaje (%)")
+print("2 - Miles (K)")
+
+
+tipo = input("Selecciona 1, 2 o 3: ").strip()
+
+# Función de conversión
+def parse_valor(val):
     if pd.isna(val):
-        return np.nan #Si esta vacio devuelve NaN
+        return np.nan
 
-    #Convertimos el valor a string y .strip() es para quitar espacios.
     s = str(val).strip()
 
-    #Si el valor esta vacio lo ignora
     if s in ["--", "", "nan"]:
         return np.nan
 
-    #Esta parte es solo para quitar caracteres que no hacen falta porque el scrapper coge todo en la pagina y algunos datos salen con letras al lado.
-    s = re.sub(r"[^\d.,BMK]", "", s)
+    # Filtrado por tipo
+    if tipo == "1" and "%" not in s:
+        return np.nan
+    if tipo == "2" and "K" not in s:
+        return np.nan
 
-    #--------------------------------------------------------
-    mult = 1
-    if s.endswith("B"):
-        mult = 1e9
-        s = s[:-1]
-    elif s.endswith("M"):
-        mult = 1e6
-        s = s[:-1]
-    elif s.endswith("K"):
-        mult = 1e3
-        s = s[:-1]
-    #--------------------------------------------------------
+    s = s.replace("%", "")
+    s = s.replace("K", "")
+    s = s.replace(",", ".")
 
-    #Elimina las comillas de los numeros.
-    s = s.replace(",", "")
-
-    #convierte la variable s en decimal si falla pues devuelve nada
     try:
-        return float(s) * mult
+        return float(s)
     except:
         return np.nan
 
-    
-#seleccionamos la columna market cap del csv y utilizamos la clase de antes para aplicarle todos los cambios mencionados anteriormente.
-df["MarketCap_num"] = df["Market Cap"].apply(parse_market_cap)
+# Convertir columna
+df["valor_num"] = df[columna].apply(parse_valor)
 
-# Gráfico de barras 
-#.figure para el tamaño de las barras
-#.bar la parte (range(len(df)) es para recorrer el numero de columnas menos 1,el df MarketCap_num es para representar la altura de las barras.
-#.xticks el (range(len(df)) espara la posicion x de las barras mientras que el  df["EPS (Previsto)"], rotation=90) es para poner las empresas y girarlas 90º
-#.title para el titulo arriba
-#.tight_layout es para ajustar las etiquetas para que todo este bien y no solape
-#.show muestra el grafico
+# Eliminar ceros y NaN
+df = df.dropna(subset=["valor_num"])
+df = df[df["valor_num"] != 0]
 
-plt.figure(figsize=(12,6))
-plt.bar(range(len(df)), df["MarketCap_num"])
-plt.xticks(range(len(df)), df["EPS (Previsto)"], rotation=90)
-plt.title("Market Cap por empresa")
+# Límites reales del eje Y
+y_min = df["valor_num"].min()
+y_max = df["valor_num"].max()
+
+
+x = np.arange(1, len(df) + 1)
+
+plt.figure(figsize=(14, 6))
+plt.bar(x, df["valor_num"])
+plt.xticks(x)
+plt.ylim(y_min, y_max)
+plt.xlabel("Índice")
+plt.ylabel(columna)
+plt.title(f"{columna} filtrado por tipo de valor")
+
+#----------------------------------------------------------------------------------------------------------------------
+
+df.columns = df.columns.str.strip()
+
+# Detectar la columna que contiene "Evento"
+evento_col = [col for col in df.columns if 'evento' in col.lower()]
+if not evento_col:
+    raise ValueError("No se encontró la columna 'Evento' en el CSV")
+evento_col = evento_col[0]
+
+# -----------------------------
+# Crear columna de números consecutivos
+# -----------------------------
+df['Número'] = range(1, len(df) + 1)
+
+# Seleccionar solo las columnas necesarias
+tabla = df[[evento_col, 'Número']]
+
+# -----------------------------
+# Crear figura y tabla
+# -----------------------------
+# Ajusta tamaño según número de filas (más filas -> figura más alta)
+fig_height = max(10, len(tabla)*0.3)
+fig, ax = plt.subplots(figsize=(12, fig_height))
+ax.axis('off')  # Quitar ejes
+
+# Crear la tabla
+table = ax.table(
+    cellText=tabla.values,
+    colLabels=[evento_col, 'Número'],
+    cellLoc='center',
+    loc='center'
+)
+
+# Ajustar fuente para que se vea mejor según número de filas
+table.auto_set_font_size(False)
+table.set_fontsize(min(13, 400/len(tabla)))  # tamaño automático según filas
+
+# Ajustar altura de las celdas para que no se superpongan
+table.auto_set_column_width([0, 1])
+
 plt.tight_layout()
+plt.show()
 
+
+
+
+
+
+plt.tight_layout()
 plt.show()
 
 
