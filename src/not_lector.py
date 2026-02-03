@@ -65,3 +65,4 @@ text_widget.config(state="disabled")
 
 # Ejecutar
 ventana.mainloop()
+
