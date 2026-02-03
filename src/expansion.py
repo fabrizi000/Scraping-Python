@@ -8,9 +8,9 @@ from pathlib import Path
 from datetime import datetime
 
 # ---------------- CONFIGURACIÓN ----------------
-URL = "https://elpais.com/economia/"
+URL = "https://www.expansion.com/economia.html"
 HEADERS = {"User-Agent": "Mozilla/5.0"}
-MAX_NOTICIAS = 3
+MAX_NOTICIAS = 15
 FRASES_RESUMEN = 3
 
 OUTPUT_DIR = Path("/home/fabri/Documents/pruebas_webbuster/datoscsv")
@@ -19,6 +19,7 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 # ---------------- RESUMEN ----------------
 def resumir_texto(texto, n_frases):
     frases = re.split(r'(?<=[.!?]) +', texto)
+
     palabras = re.findall(r'\w+', texto.lower())
     frecuencia = Counter(palabras)
 
@@ -33,17 +34,18 @@ def resumir_texto(texto, n_frases):
 
 # ---------------- OBTENER ENLACES ----------------
 def obtener_links():
-    print("Obteniendo enlaces...")
+    print("Obteniendo enlaces de Expansión...")
     r = requests.get(URL, headers=HEADERS)
     soup = BeautifulSoup(r.text, "html.parser")
 
     links = []
-    for article in soup.find_all("article"):
-        a = article.find("a", href=True)
-        if a and a["href"].startswith("https://"):
-            links.append(a["href"])
+    for a in soup.find_all("a", href=True):
+        href = a["href"]
+        if href.startswith("https://www.expansion.com/economia/") and href.endswith(".html"):
+            links.append(href)
 
-    return list(dict.fromkeys(links))[:MAX_NOTICIAS]
+    # quitar duplicados, NO limitar aquí
+    return list(dict.fromkeys(links))
 
 # ---------------- SCRAPEAR NOTICIA ----------------
 def scrapear_noticia(url):
@@ -52,7 +54,7 @@ def scrapear_noticia(url):
     soup = BeautifulSoup(r.text, "html.parser")
 
     titulo = soup.find("h1")
-    cuerpo = soup.find("div", {"data-dtm-region": "articulo_cuerpo"})
+    cuerpo = soup.find("div", class_="ue-c-article__body")
 
     if not titulo or not cuerpo:
         return None
@@ -61,7 +63,7 @@ def scrapear_noticia(url):
     resumen = resumir_texto(texto, FRASES_RESUMEN)
 
     return {
-        "medio": "El País",
+        "medio": "Expansión",
         "titulo": titulo.get_text(strip=True),
         "resumen": resumen
     }
@@ -72,6 +74,9 @@ def main():
     noticias = []
 
     for url in links:
+        if len(noticias) >= MAX_NOTICIAS:
+            break
+
         try:
             noticia = scrapear_noticia(url)
             if noticia:
@@ -89,7 +94,7 @@ def main():
 
     df = pd.DataFrame(noticias)
     fecha = datetime.now().strftime("%Y%m%d_%H%M%S")
-    archivo = OUTPUT_DIR / f"elpais_resumen_{fecha}.csv"
+    archivo = OUTPUT_DIR / f"expansion_resumen_{fecha}.csv"
     df.to_csv(archivo, index=False)
 
     print("Scraping terminado correctamente")
