@@ -34,10 +34,11 @@ else:
 print("\n¿Qué tipo de valores quieres representar?")
 print("1 - Porcentaje (%)")
 print("2 - Miles (K)")
+print("3 - Miles de millones (B)")
 
-tipo = input("Selecciona 1 o 2: ").strip()
+tipo = input("Selecciona 1, 2 o 3: ").strip()
 
-if tipo not in ["1", "2"]:
+if tipo not in ["1", "2", "3"]:
     print("Opción no válida")
     exit()
 
@@ -53,19 +54,28 @@ def parse_valor(val):
     if s in ["--", "", "nan"]:
         return np.nan
 
-    # Filtrar por tipo
-    if tipo == "1" and "%" not in s:
-        return np.nan
-    if tipo == "2" and "K" not in s:
-        return np.nan
-
-    # Convertir texto a número
-    s = s.replace("%", "")
-    s = s.replace("K", "")
+    # Cambiar coma por punto decimal
     s = s.replace(",", ".")
 
     try:
-        return float(s)
+        # Porcentaje
+        if tipo == "1":
+            if "%" not in s:
+                return np.nan
+            return float(s.replace("%", ""))
+
+        # Miles (K)
+        if tipo == "2":
+            if "K" not in s:
+                return np.nan
+            return float(s.replace("K", ""))
+
+        # Miles de millones (B)
+        if tipo == "3":
+            if "B" not in s:
+                return np.nan
+            return float(s.replace("B", ""))
+
     except:
         return np.nan
 
@@ -86,7 +96,7 @@ if df.empty:
     exit()
 
 # -----------------------------
-# Gráfico
+# GRÁFICO
 # -----------------------------
 y_min = df["valor_num"].min()
 y_max = df["valor_num"].max()
@@ -98,31 +108,46 @@ if y_min == y_max:
 
 x = np.arange(1, len(df) + 1)
 
+# Colores según signo
+colores = ["#90EE90" if v >= 0 else "#FF7F7F" for v in df["valor_num"]]
+
 plt.figure(figsize=(14, 6))
-plt.bar(x, df["valor_num"])
+plt.bar(x, df["valor_num"], color=colores)
 plt.xticks(x)
 plt.ylim(y_min, y_max)
 plt.xlabel("Índice")
 plt.ylabel(columna)
-plt.title(f"{columna} filtrado por tipo de valor")
+
+# Línea horizontal en cero
+plt.axhline(0, color="black", linewidth=1)
+
+# Título según tipo
+if tipo == "1":
+    titulo = "Porcentajes (%)"
+elif tipo == "2":
+    titulo = "Miles (K)"
+else:
+    titulo = "Miles de millones (B)"
+
+plt.title(f"{columna} - {titulo}")
 
 # -----------------------------
 # TABLA DE EVENTOS
 # -----------------------------
 evento_col = "evento"
 
-df['numero'] = range(1, len(df) + 1)
-tabla = df[[evento_col, 'numero']]
+df["numero"] = range(1, len(df) + 1)
+tabla = df[[evento_col, "numero"]]
 
 fig_height = max(10, len(tabla) * 0.3)
 fig, ax = plt.subplots(figsize=(12, fig_height))
-ax.axis('off')
+ax.axis("off")
 
 table = ax.table(
     cellText=tabla.values,
-    colLabels=['Evento', 'Número'],
-    cellLoc='center',
-    loc='center'
+    colLabels=["Evento", "Número"],
+    cellLoc="center",
+    loc="center"
 )
 
 table.auto_set_font_size(False)
