@@ -6,16 +6,37 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from datetime import datetime
+from pathlib import Path
+import argparse
 import pandas as pd
+
+HOME = Path.home()
+
+DOCUMENTS = HOME / "Documents"
+if not DOCUMENTS.exists():
+    DOCUMENTS = HOME / "Documentos"
+
+CARPETA_SALIDA = DOCUMENTS / "WebBusterResultados" / "InvestingEconomicCalendar"
+CARPETA_SALIDA.mkdir(parents=True, exist_ok=True)
 
 # Configuracion manual para pruebas
 URL = "https://es.investing.com/economic-calendar/"
-IMPACTO_MINIMO = 3 # Solo selecionar los siguientes impactos como filtro: 1 = bajo, 2 = medio, 3 = alto
-FECHA_OBJETIVO = "2022-05-05" # YYYY-MM-DD fecha solo en ese formato, se recomienda fechas superiores a las del 2018
-CHROMEDRIVER_PATH = "/usr/local/bin/chromedriver"
+CHROMEDRIVER_PATH = "/usr/bin/chromedriver"
+# Leer parámetros desde fuera (Tkinter o consola)
+parser = argparse.ArgumentParser(description="Scraper de Investing con Firefox")
+parser.add_argument("--fecha", required=True, help="Fecha en formato YYYY-MM-DD")
+parser.add_argument("--impacto", type=int, choices=[1, 2, 3], required=True, help="Impacto: 1=bajo, 2=medio, 3=alto")
+args = parser.parse_args()
 
-CARPETA_SALIDA = "/home/fabri/Documents/pruebas_webbuster/datoscsv" # Esta es mi carpeta local, para hacer el GUI se modificara a un general
-os.makedirs(CARPETA_SALIDA, exist_ok=True)
+# Validar fecha recibida (desde Tkinter o consola)
+try:
+    datetime.strptime(args.fecha, "%Y-%m-%d")
+except ValueError:
+    print("Fecha incorrecta. Por favor, introduce una fecha válida en formato YYYY-MM-DD (por ejemplo: 2024-2-15, 2024-12-15 2024-2-5).")
+    raise SystemExit(1)
+
+FECHA_OBJETIVO = args.fecha
+IMPACTO_MINIMO = args.impacto
 
 SELECTOR_LOGIN_POPUP = "div[class*='auth_popup']"
 SELECTOR_IMPORTANCIA = 'td[class*="min-w-[60px]"] svg.opacity-60'
@@ -134,23 +155,22 @@ if df.empty:
     print(f"No hay noticias de impacto {IMPACTO_MINIMO} para {FECHA_OBJETIVO}")
 else:
     df = df.replace("", pd.NA)
-    df.columns = [col.capitalize() for col in df.columns]
-    df = df.sort_values(by="Hora")
+    df = df.sort_values(by="hora")
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     nombre_csv = os.path.join(
         CARPETA_SALIDA,
-        f"calendario_{FECHA_OBJETIVO}_impacto{IMPACTO_MINIMO}_{timestamp}.csv"
+        f"chrome_calendario_{FECHA_OBJETIVO}_impacto{IMPACTO_MINIMO}_{timestamp}.csv"
     )
     df.to_csv(nombre_csv, index=False, encoding="utf-8-sig")
 
-    df_resumen = df["Divisa"].value_counts().reset_index()
-    df_resumen.columns = ["Divisa", "Total noticias"]
+    df_resumen = df["divisa"].value_counts().reset_index()
+    df_resumen.columns = ["divisa", "total noticias"]
 
     nombre_csv_resumen = os.path.join(
         CARPETA_SALIDA,
-        f"calendario_{FECHA_OBJETIVO}_impacto{IMPACTO_MINIMO}_{timestamp}_resumen_divisas.csv"
+        f"chrome_calendario_{FECHA_OBJETIVO}_impacto{IMPACTO_MINIMO}_{timestamp}_resumen_divisas.csv"
     )
     df_resumen.to_csv(nombre_csv_resumen, index=False, encoding="utf-8-sig")
 
@@ -163,4 +183,4 @@ else:
 
     print("\nResumen por divisa:")
     for _, row in df_resumen.iterrows():
-        print(f"{row['Divisa']}: {row['Total noticias']}")
+        print(f"{row['divisa']}: {row['total noticias']}")

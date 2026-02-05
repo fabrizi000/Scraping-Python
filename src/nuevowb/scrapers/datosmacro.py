@@ -3,10 +3,16 @@ import pandas as pd
 from bs4 import BeautifulSoup
 from pathlib import Path
 
-# Configuracion local
+# Configuracion para cualquier equipo
+HOME = Path.home()
+
+DOCUMENTS = HOME / "Documents"
+if not DOCUMENTS.exists():
+    DOCUMENTS = HOME / "Documentos"
+
+CARPETA_SALIDA = DOCUMENTS / "WebBusterResultados" / "DatosMacro"
+CARPETA_SALIDA.mkdir(parents=True, exist_ok=True)
 URL = "https://datosmacro.expansion.com/paro"
-OUTPUT_DIR = Path("/home/fabri/Documents/pruebas_webbuster/datoscsv/")
-OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 PAISES_SLUG = {
     "espana": "España",
@@ -70,15 +76,15 @@ for fila in tabla.find_all("tr"):
     fecha = fila.find("td", class_="fecha")
 
     datos_resumen.append({
-        "País": pais,
-        "Tasa de desempleo (%)": leer_numero(numeros[0]) if len(numeros) > 0 else None,
-        "Variación": leer_numero(numeros[1]) if len(numeros) > 1 else None,
-        "Variación anual": leer_numero(numeros[2]) if len(numeros) > 2 else None,
-        "Mes": fecha.get_text(strip=True) if fecha else None
+        "pais": pais,
+        "tasa de desempleo (%)": leer_numero(numeros[0]) if len(numeros) > 0 else None,
+        "variación": leer_numero(numeros[1]) if len(numeros) > 1 else None,
+        "variación anual": leer_numero(numeros[2]) if len(numeros) > 2 else None,
+        "mes": fecha.get_text(strip=True) if fecha else None
     })
 
 df_resumen = pd.DataFrame(datos_resumen)
-df_resumen.to_csv(OUTPUT_DIR / "paro_paises_2025.csv", index=False)
+df_resumen.to_csv(CARPETA_SALIDA / "paro_paises_2025.csv", index=False)
 
 print("CSV resumen generado correctamente")
 
@@ -106,7 +112,7 @@ for pais, url in urls_paises.items():
             continue
 
         datos.append({
-            "Indicador": td[0].get_text(strip=True),
+            "indicador": td[0].get_text(strip=True),
             "2025": td[1].get_text(strip=True),
             "2024": td[2].get_text(strip=True)
         })
@@ -114,7 +120,7 @@ for pais, url in urls_paises.items():
     df_pais = pd.DataFrame(datos)
     nombre = pais.lower().replace(" ", "_")
     df_pais.to_csv(
-        OUTPUT_DIR / f"paro_{nombre}_2025_2024.csv",
+        CARPETA_SALIDA / f"paro_{nombre}_2025_2024.csv",
         index=False
     )
 
