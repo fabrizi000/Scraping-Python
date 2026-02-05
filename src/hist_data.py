@@ -3,9 +3,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Leer el CSV
-df = pd.read_csv("/home/alusmr/Documentos/python2/t2.csv")
+df = pd.read_csv("C:/Users/manuel/Documents/python/t6.csv")
 
-# Preguntar qué columna usar
+# Limpiar nombres de columnas
+df.columns = df.columns.str.strip().str.lower()
+
+# -----------------------------
+# Selección de columna
+# -----------------------------
 print("¿Qué dato quieres mostrar?")
 print("1 - Actual")
 print("2 - Prevision")
@@ -14,24 +19,31 @@ print("3 - Anterior")
 opcion = input("Selecciona 1, 2 o 3: ").strip()
 
 if opcion == "1":
-    columna = "Actual"
+    columna = "actual"
 elif opcion == "2":
-    columna = "Prevision"
+    columna = "prevision"
 elif opcion == "3":
-    columna = "Anterior"
+    columna = "anterior"
 else:
     print("Opción no válida")
     exit()
 
-# Preguntar qué tipo de valores mostrar
+# -----------------------------
+# Tipo de valor
+# -----------------------------
 print("\n¿Qué tipo de valores quieres representar?")
 print("1 - Porcentaje (%)")
 print("2 - Miles (K)")
 
+tipo = input("Selecciona 1 o 2: ").strip()
 
-tipo = input("Selecciona 1, 2 o 3: ").strip()
+if tipo not in ["1", "2"]:
+    print("Opción no válida")
+    exit()
 
+# -----------------------------
 # Función de conversión
+# -----------------------------
 def parse_valor(val):
     if pd.isna(val):
         return np.nan
@@ -41,12 +53,13 @@ def parse_valor(val):
     if s in ["--", "", "nan"]:
         return np.nan
 
-    # Filtrado por tipo
+    # Filtrar por tipo
     if tipo == "1" and "%" not in s:
         return np.nan
     if tipo == "2" and "K" not in s:
         return np.nan
 
+    # Convertir texto a número
     s = s.replace("%", "")
     s = s.replace("K", "")
     s = s.replace(",", ".")
@@ -56,17 +69,32 @@ def parse_valor(val):
     except:
         return np.nan
 
+# -----------------------------
 # Convertir columna
+# -----------------------------
 df["valor_num"] = df[columna].apply(parse_valor)
 
-# Eliminar ceros y NaN
+# Eliminar NaN y ceros
 df = df.dropna(subset=["valor_num"])
 df = df[df["valor_num"] != 0]
 
-# Límites reales del eje Y
+# -----------------------------
+# COMPROBAR SI HAY DATOS
+# -----------------------------
+if df.empty:
+    print("No hay datos con ese filtro")
+    exit()
+
+# -----------------------------
+# Gráfico
+# -----------------------------
 y_min = df["valor_num"].min()
 y_max = df["valor_num"].max()
 
+# Evitar rango cero
+if y_min == y_max:
+    y_min -= 1
+    y_max += 1
 
 x = np.arange(1, len(df) + 1)
 
@@ -78,57 +106,28 @@ plt.xlabel("Índice")
 plt.ylabel(columna)
 plt.title(f"{columna} filtrado por tipo de valor")
 
-#----------------------------------------------------------------------------------------------------------------------
-
-df.columns = df.columns.str.strip()
-
-# Detectar la columna que contiene "Evento"
-evento_col = [col for col in df.columns if 'evento' in col.lower()]
-if not evento_col:
-    raise ValueError("No se encontró la columna 'Evento' en el CSV")
-evento_col = evento_col[0]
-
 # -----------------------------
-# Crear columna de números consecutivos
+# TABLA DE EVENTOS
 # -----------------------------
-df['Número'] = range(1, len(df) + 1)
+evento_col = "evento"
 
-# Seleccionar solo las columnas necesarias
-tabla = df[[evento_col, 'Número']]
+df['numero'] = range(1, len(df) + 1)
+tabla = df[[evento_col, 'numero']]
 
-# -----------------------------
-# Crear figura y tabla
-# -----------------------------
-# Ajusta tamaño según número de filas (más filas -> figura más alta)
-fig_height = max(10, len(tabla)*0.3)
+fig_height = max(10, len(tabla) * 0.3)
 fig, ax = plt.subplots(figsize=(12, fig_height))
-ax.axis('off')  # Quitar ejes
+ax.axis('off')
 
-# Crear la tabla
 table = ax.table(
     cellText=tabla.values,
-    colLabels=[evento_col, 'Número'],
+    colLabels=['Evento', 'Número'],
     cellLoc='center',
     loc='center'
 )
 
-# Ajustar fuente para que se vea mejor según número de filas
 table.auto_set_font_size(False)
-table.set_fontsize(min(13, 400/len(tabla)))  # tamaño automático según filas
-
-# Ajustar altura de las celdas para que no se superpongan
+table.set_fontsize(min(13, 400 / len(tabla)))
 table.auto_set_column_width([0, 1])
 
 plt.tight_layout()
 plt.show()
-
-
-
-
-
-
-plt.tight_layout()
-plt.show()
-
-
-
