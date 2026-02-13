@@ -3,60 +3,38 @@
 sudo apt update
 sudo apt upgrade -y
 
-sudo apt install -y \
-  wget \
-  unzip \
-  ca-certificates \
-  python3 \
-  python3-venv \
-  python3-pip \
-  python3-tk \
-  libgtk-3-0 \
-  libnss3 \
-  libxss1 \
-  libasound2
+sudo apt install -y python3 python3-venv python3-tk wget curl unzip ca-certificates gnupg libglib2.0-0 libgl1
 
-wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+# Google Chrome
+wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
 sudo apt install -y ./google-chrome-stable_current_amd64.deb
+rm -f google-chrome-stable_current_amd64.deb
 
-wget https://github.com/mozilla/geckodriver/releases/latest/download/geckodriver-linux64.tar.gz
-tar -xzf geckodriver-linux64.tar.gz
+# Geckodriver
+wget https://github.com/mozilla/geckodriver/releases/download/v0.35.0/geckodriver-v0.35.0-linux64.tar.gz
+tar -xzf geckodriver-v0.35.0-linux64.tar.gz
 sudo mv -f geckodriver /usr/local/bin/geckodriver
 sudo chmod +x /usr/local/bin/geckodriver
+rm -f geckodriver-v0.35.0-linux64.tar.gz
 
+# Chromedriver (en tu sistema sale plano, sin carpeta)
 wget https://chromedriver.storage.googleapis.com/LATEST_RELEASE
 wget https://chromedriver.storage.googleapis.com/$(cat LATEST_RELEASE)/chromedriver_linux64.zip
 unzip -o chromedriver_linux64.zip
 sudo mv -f chromedriver /usr/local/bin/chromedriver
 sudo chmod +x /usr/local/bin/chromedriver
+rm -f chromedriver_linux64.zip LATEST_RELEASE LICENSE.chromedriver
 
-sudo mkdir -p /opt/WebBuster
+# Estructura en /opt
 sudo mkdir -p /opt/WebBuster/scrapers
-
-sudo mv WebBuster /opt/WebBuster/WebBuster
+sudo cp -f WebBuster /opt/WebBuster/WebBuster
+sudo cp -f icono.png /opt/WebBuster/icono.png
+sudo cp -rf scrapers/* /opt/WebBuster/scrapers/
 sudo chmod +x /opt/WebBuster/WebBuster
 
-sudo cp -r scrapers/* /opt/WebBuster/scrapers/
-sudo cp icono.png /opt/WebBuster/icono.png
-
-DOCS_DIR=$(xdg-user-dir DOCUMENTS)
-
-mkdir -p "$DOCS_DIR/WebBusterResultados/InvestingEconomicCalendar"
-mkdir -p "$DOCS_DIR/WebBusterResultados/Elpais"
-mkdir -p "$DOCS_DIR/WebBusterResultados/Expansion"
-mkdir -p "$DOCS_DIR/WebBusterResultados/Vozpopuli"
-mkdir -p "$DOCS_DIR/WebBusterResultados/DatosMacro"
-
-mkdir -p ~/.local/share/applications
-
-cat > ~/.local/share/applications/webbuster.desktop << 'EOF'
-[Desktop Entry]
-Name=WebBuster
-Exec=/opt/WebBuster/WebBuster
-Icon=/opt/WebBuster/assets/icono.png
-Type=Application
-Terminal=false
-Categories=Utility;
-EOF
-
-chmod +x ~/.local/share/applications/webbuster.desktop
+# Entorno venv
+sudo python3 -m venv /opt/WebBuster/venv
+source /opt/WebBuster/venv/bin/activate
+pip install --upgrade pip
+pip install selenium pandas requests beautifulsoup4 lxml matplotlib numpy
+deactivate
