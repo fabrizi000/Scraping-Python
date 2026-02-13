@@ -28,7 +28,10 @@ def cargar_csv():
     global df
     ruta = filedialog.askopenfilename(filetypes=[("CSV", "*.csv")])
     if ruta:
-        df = pd.read_csv(ruta)
+        try:
+            df = pd.read_csv(ruta)
+        except:
+            df = pd.read_csv('') # path del fichero que sabes que funciona
         df.columns = df.columns.str.lower()
         messagebox.showinfo("OK", "CSV cargado")
 
@@ -92,15 +95,18 @@ def mostrar_noticias():
     texto = tk.Text(ventana, wrap="word")
     texto.pack(fill="both", expand=True)
 
-    with open(ruta, encoding="utf-8") as f:
-        lector = csv.DictReader(f)
-        for fila in lector:
-            texto.insert("end", fila.get("titulo", "") + "\n", "t")
-            texto.insert("end", fila.get("resumen", "") + "\n\n")
-            texto.insert("end", "-" * 50 + "\n\n")
-
-    texto.tag_config("t", font=("Arial", 14, "bold"))
-    texto.config(state="disabled")
+    try:
+        with open(ruta, encoding="utf-8") as f:
+            lector = csv.DictReader(f)
+            for fila in lector:
+                texto.insert("end", fila.get("titulo", "") + "\n", "t")
+                texto.insert("end", fila.get("resumen", "") + "\n\n")
+                texto.insert("end", "-" * 50 + "\n\n")
+        texto.tag_config("t", font=("Arial", 14, "bold"))
+        texto.config(state="disabled")
+    except:
+        return 0
+    
 
 
 # ---------- UI ----------
