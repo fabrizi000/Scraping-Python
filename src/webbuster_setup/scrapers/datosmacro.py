@@ -33,7 +33,10 @@ def leer_numero(td):
         return None
 
     if td.has_attr("data-value"):
-        return float(td["data-value"])
+        try:
+            return float(td["data-value"])
+        except ValueError:
+            return None
 
     texto = td.get_text(strip=True)
     if not texto or texto == "—":
@@ -45,15 +48,20 @@ def leer_numero(td):
     except ValueError:
         return None
 
-# Tabla de paro sobre los paises mas influyentes en la economia (incluyendo a Espana y quitando China)
+# Tabla de paro principal
 html = requests.get(URL, headers=HEADERS).text
 soup = BeautifulSoup(html, "html.parser")
 
-tabla = soup.find(
-    "div",
-    class_="tabletit",
-    string="Tasa de desempleo: 2025 Países"
-).find_next("table")
+titulo = None
+for div in soup.find_all("div", class_="tabletit"):
+    if "Tasa de desempleo" in div.get_text():
+        titulo = div
+        break
+
+if not titulo:
+    raise Exception("No se encontró la tabla principal de tasa de desempleo")
+
+tabla = titulo.find_next("table")
 
 datos_resumen = []
 urls_paises = {}
@@ -84,43 +92,49 @@ for fila in tabla.find_all("tr"):
     })
 
 df_resumen = pd.DataFrame(datos_resumen)
-df_resumen.to_csv(CARPETA_SALIDA / "paro_paises_2025.csv", index=False)
+df_resumen.to_csv(CARPETA_SALIDA / "paro_paises_resumen.csv", index=False)
 
 print("CSV resumen generado correctamente")
 
-# Tabla comparativa mas detallada de cada pais
+# Tablas detalladas por país
 for pais, url in urls_paises.items():
     html_pais = requests.get(url, headers=HEADERS).text
     soup_pais = BeautifulSoup(html_pais, "html.parser")
 
-    titulo = soup_pais.find(
-        "div",
-        class_="tabletit",
-        string=f"{pais}: Paro"
-    )
+    titulo_pais = None
+    for div in soup_pais.find_all("div", class_="tabletit"):
+        texto = div.get_text()
+        if pais in texto and "Paro" in texto:
+            titulo_pais = div
+            break
 
-    if not titulo:
+    if not titulo_pais:
         print(f"No se encontró tabla para {pais}")
         continue
 
-    tabla_pais = titulo.find_next("table")
+    tabla_pais = titulo_pais.find_next("table")
 
     datos = []
-    for tr in tabla_pais.find_all("tr")[1:]:
+    filas = tabla_pais.find_all("tr")
+
+    # Cabeceras dinámicas (años reales)
+    headers = [th.get_text(strip=True) for th in filas[0].find_all("th")]
+
+    for tr in filas[1:]:
         td = tr.find_all("td")
-        if len(td) != 3:
+        if len(td) != len(headers):
             continue
 
-        datos.append({
-            "indicador": td[0].get_text(strip=True),
-            "2025": td[1].get_text(strip=True),
-            "2024": td[2].get_text(strip=True)
-        })
+        fila_dict = {"indicador": td[0].get_text(strip=True)}
+        for i in range(1, len(headers)):
+            fila_dict[headers[i]] = td[i].get_text(strip=True)
+
+        datos.append(fila_dict)
 
     df_pais = pd.DataFrame(datos)
     nombre = pais.lower().replace(" ", "_")
     df_pais.to_csv(
-        CARPETA_SALIDA / f"paro_{nombre}_2025_2024.csv",
+        CARPETA_SALIDA / f"paro_{nombre}.csv",
         index=False
     )
 
